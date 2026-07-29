@@ -4,6 +4,7 @@ import "./globals.css";
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const socialImageUrl = `${siteUrl.replace(/\/$/, "")}/og.png`;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
     locale: "zh_CN",
     images: [
       {
-        url: `${basePath}/og.png`,
+        url: socialImageUrl,
         width: 1200,
         height: 630,
         alt: "Kevin Shell - 杨泽存 Agent 产品经理",
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Kevin Shell｜杨泽存 · Agent 产品经理",
     description: "Don't read my resume. Run it.",
-    images: [`${basePath}/og.png`],
+    images: [socialImageUrl],
   },
   icons: {
     icon: `${basePath}/assets/avatar/avatar-pixel.png`,

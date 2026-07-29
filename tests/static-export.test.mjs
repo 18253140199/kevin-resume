@@ -11,6 +11,11 @@ test("exports a complete GitHub Pages site", async () => {
   assert.match(html, /<title>Kevin Shell｜杨泽存 · Agent 产品经理<\/title>/);
   assert.match(html, /KEVIN SHELL/);
   assert.match(html, /Radar Agent/);
+  assert.match(
+    html,
+    /https:\/\/18253140199\.github\.io\/kevin-resume\/og\.png/,
+  );
+  assert.doesNotMatch(html, /kevin-resume\/kevin-resume/);
 
   await Promise.all([
     access(
