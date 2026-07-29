@@ -514,7 +514,7 @@ export function PortfolioStage() {
       <div className="stage-corner-data" aria-hidden="true">
         <span>LAT 39.9042</span>
         <span>LON 116.4074</span>
-        <span>BUILD 52CD121</span>
+        <span>BUILD KEVIN-SHELL 2.0</span>
       </div>
 
       <a className="screen-reader-contact" href={`mailto:${profile.email}`}>

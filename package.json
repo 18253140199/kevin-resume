@@ -1,6 +1,6 @@
 {
-  "name": "strike-a-match-resume",
-  "version": "0.1.0",
+  "name": "kevin-shell-resume",
+  "version": "2.0.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
