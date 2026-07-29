@@ -7,12 +7,12 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "请点燃我｜杨泽存 · Agent 产品经理",
+  title: "Kevin Shell｜杨泽存 · Agent 产品经理",
   description:
-    "一份以火柴点燃为核心交互的个人简历。认识杨泽存如何构建、评测与治理 Agent。",
+    "通过一台 3D 键盘运行杨泽存的交互简历，查看 Agent 产品、评测治理、Loop 与项目实践。",
   openGraph: {
-    title: "请点燃我｜杨泽存 · Agent 产品经理",
-    description: "Strike a Match, Know My Story.",
+    title: "Kevin Shell｜杨泽存 · Agent 产品经理",
+    description: "Don't read my resume. Run it.",
     type: "website",
     locale: "zh_CN",
     images: [
@@ -20,19 +20,19 @@ export const metadata: Metadata = {
         url: `${basePath}/og.png`,
         width: 1200,
         height: 630,
-        alt: "请点燃我 - 杨泽存 Agent 产品经理",
+        alt: "Kevin Shell - 杨泽存 Agent 产品经理",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "请点燃我｜杨泽存 · Agent 产品经理",
-    description: "Strike a Match, Know My Story.",
+    title: "Kevin Shell｜杨泽存 · Agent 产品经理",
+    description: "Don't read my resume. Run it.",
     images: [`${basePath}/og.png`],
   },
   icons: {
-    icon: `${basePath}/character-intro3d.png`,
-    shortcut: `${basePath}/character-intro3d.png`,
+    icon: `${basePath}/assets/avatar/avatar-pixel.png`,
+    shortcut: `${basePath}/assets/avatar/avatar-pixel.png`,
   },
 };
 

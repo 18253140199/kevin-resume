@@ -1,11 +1,5 @@
-import { IntroScene } from "@/components/IntroScene";
-import { Portfolio } from "@/components/Portfolio";
+import { PortfolioStage } from "@/components/portfolio/PortfolioStage";
 
 export default function Home() {
-  return (
-    <div id="top">
-      <IntroScene />
-      <Portfolio />
-    </div>
-  );
+  return <PortfolioStage />;
 }

@@ -8,13 +8,15 @@ test("exports a complete GitHub Pages site", async () => {
     "utf8",
   );
 
-  assert.match(html, /<title>请点燃我｜杨泽存 · Agent 产品经理<\/title>/);
-  assert.match(html, /点燃一根火柴/);
-  assert.match(html, /character-intro3d\.png/);
-  assert.match(html, /Radar Agent 评测体系/);
+  assert.match(html, /<title>Kevin Shell｜杨泽存 · Agent 产品经理<\/title>/);
+  assert.match(html, /KEVIN SHELL/);
+  assert.match(html, /Radar Agent/);
 
   await Promise.all([
-    access(new URL("../out/character-intro3d.png", import.meta.url)),
+    access(
+      new URL("../out/assets/skills-keyboard.splinecode", import.meta.url),
+    ),
+    access(new URL("../out/assets/avatar/avatar-pixel.png", import.meta.url)),
     access(new URL("../out/og.png", import.meta.url)),
   ]);
 });
