@@ -1,23 +1,44 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from "react";
 
 const ASSET_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const SOUND_KEY = "kevin-shell:sound";
+const soundListeners = new Set<() => void>();
+
+function subscribeToSoundPreference(listener: () => void) {
+  soundListeners.add(listener);
+  window.addEventListener("storage", listener);
+  return () => {
+    soundListeners.delete(listener);
+    window.removeEventListener("storage", listener);
+  };
+}
+
+function getSoundPreference() {
+  try {
+    return localStorage.getItem(SOUND_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
 
 export function useKeyboardAudio() {
   const contextRef = useRef<AudioContext | null>(null);
   const pressBufferRef = useRef<AudioBuffer | null>(null);
   const releaseBufferRef = useRef<AudioBuffer | null>(null);
   const loadingRef = useRef<Promise<AudioContext | null> | null>(null);
-  const [enabled, setEnabledState] = useState(() => {
-    if (typeof window === "undefined") return true;
-    try {
-      return localStorage.getItem(SOUND_KEY) !== "off";
-    } catch {
-      return true;
-    }
-  });
+  const enabled = useSyncExternalStore(
+    subscribeToSoundPreference,
+    getSoundPreference,
+    () => true,
+  );
 
   const ensureAudio = useCallback(async () => {
     if (contextRef.current) {
@@ -111,21 +132,50 @@ export function useKeyboardAudio() {
   );
 
   const setEnabled = useCallback((next: boolean) => {
-    setEnabledState(next);
     try {
       localStorage.setItem(SOUND_KEY, next ? "on" : "off");
     } catch {
       // Ignore storage errors.
     }
+    soundListeners.forEach((listener) => listener());
   }, []);
 
-  return {
-    enabled,
-    setEnabled,
-    playPress: () => void playBuffer("press"),
-    playRelease: () => void playBuffer("release", 0.1),
-    playExecute: () => void playTone(620, 0.18),
-    playComplete: () => void playTone(880, 0.24, 0.028),
-    playError: () => void playTone(150, 0.3, 0.035),
-  };
+  const playPress = useCallback(() => void playBuffer("press"), [playBuffer]);
+  const playRelease = useCallback(
+    () => void playBuffer("release", 0.1),
+    [playBuffer],
+  );
+  const playExecute = useCallback(
+    () => void playTone(620, 0.18),
+    [playTone],
+  );
+  const playComplete = useCallback(
+    () => void playTone(880, 0.24, 0.028),
+    [playTone],
+  );
+  const playError = useCallback(
+    () => void playTone(150, 0.3, 0.035),
+    [playTone],
+  );
+
+  return useMemo(
+    () => ({
+      enabled,
+      setEnabled,
+      playPress,
+      playRelease,
+      playExecute,
+      playComplete,
+      playError,
+    }),
+    [
+      enabled,
+      playComplete,
+      playError,
+      playExecute,
+      playPress,
+      playRelease,
+      setEnabled,
+    ],
+  );
 }

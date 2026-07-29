@@ -4,6 +4,7 @@ import type {
   ResumeExperience,
   ResumeProject,
 } from "@/types/portfolio";
+import { COMMAND_KEY_OBJECTS } from "@/components/keyboard/keyboard-config";
 
 export const profile = {
   name: "杨泽存",
@@ -247,7 +248,7 @@ export const capabilities: CapabilityEvidence[] = [
     evidence: ["MWS 智能客服", "HAAP Agent", "本地 Eval Agent"],
     relatedExperiences: ["美团"],
     relatedProjects: ["MWS", "Local Eval Agent"],
-    keyObjectName: "react",
+    keyObjectName: COMMAND_KEY_OBJECTS.experience,
   },
   {
     id: "product",
@@ -256,7 +257,7 @@ export const capabilities: CapabilityEvidence[] = [
     evidence: ["5+ 功能迭代", "企业级 Agent 产品化", "PRD 与 Demo 验证"],
     relatedExperiences: ["美团", "网易有道"],
     relatedProjects: ["MWS", "Radar Eval"],
-    keyObjectName: "nextjs",
+    keyObjectName: COMMAND_KEY_OBJECTS.projects,
   },
   {
     id: "eval",
@@ -265,7 +266,7 @@ export const capabilities: CapabilityEvidence[] = [
     evidence: ["7+ 质量指标", "根因定位耗时 -75%", "本地 Eval Agent"],
     relatedExperiences: ["美团", "网易有道"],
     relatedProjects: ["Radar Eval", "Local Eval Agent"],
-    keyObjectName: "ts",
+    keyObjectName: COMMAND_KEY_OBJECTS.eval,
   },
   {
     id: "loop",
@@ -274,7 +275,7 @@ export const capabilities: CapabilityEvidence[] = [
     evidence: ["质量巡检 Loop", "研发辅助 Loop", "角色隔离与状态恢复"],
     relatedExperiences: ["美团"],
     relatedProjects: ["Auto Inspection Loop", "Auto Development Loop"],
-    keyObjectName: "git",
+    keyObjectName: COMMAND_KEY_OBJECTS.loop,
   },
   {
     id: "build",
@@ -283,7 +284,7 @@ export const capabilities: CapabilityEvidence[] = [
     evidence: ["6 个 HTML 工具", "前端运营页面", "评测原型"],
     relatedExperiences: ["网易有道", "美团"],
     relatedProjects: ["HTML Productivity Tools"],
-    keyObjectName: "html",
+    keyObjectName: COMMAND_KEY_OBJECTS.skills,
   },
   {
     id: "research",
@@ -292,7 +293,7 @@ export const capabilities: CapabilityEvidence[] = [
     evidence: ["开放词汇 3D 检测", "精度 +17%", "EI 论文"],
     relatedExperiences: ["清华大学"],
     relatedProjects: ["Open-vocabulary 3D"],
-    keyObjectName: "nodejs",
+    keyObjectName: COMMAND_KEY_OBJECTS.whoami,
   },
 ];
 
@@ -305,7 +306,7 @@ export const commandRegistry: CommandDefinition[] = [
     description: "个人身份与定位",
     functionKey: "F1",
     physicalKey: "F1",
-    keyObjectName: "js",
+    keyObjectName: COMMAND_KEY_OBJECTS.whoami,
     module: "whoami",
   },
   {
@@ -316,7 +317,7 @@ export const commandRegistry: CommandDefinition[] = [
     description: "实习与平台经历",
     functionKey: "F2",
     physicalKey: "F2",
-    keyObjectName: "react",
+    keyObjectName: COMMAND_KEY_OBJECTS.experience,
     module: "experience",
   },
   {
@@ -327,7 +328,7 @@ export const commandRegistry: CommandDefinition[] = [
     description: "代表项目与结果",
     functionKey: "F3",
     physicalKey: "F3",
-    keyObjectName: "nextjs",
+    keyObjectName: COMMAND_KEY_OBJECTS.projects,
     module: "projects",
   },
   {
@@ -338,7 +339,7 @@ export const commandRegistry: CommandDefinition[] = [
     description: "能力证据而非标签",
     functionKey: "F4",
     physicalKey: "F4",
-    keyObjectName: "ts",
+    keyObjectName: COMMAND_KEY_OBJECTS.skills,
     module: "skills",
   },
   {
@@ -349,7 +350,7 @@ export const commandRegistry: CommandDefinition[] = [
     description: "评测与治理体系",
     functionKey: "F5",
     physicalKey: "F5",
-    keyObjectName: "docker",
+    keyObjectName: COMMAND_KEY_OBJECTS.eval,
     module: "eval",
   },
   {
@@ -360,7 +361,7 @@ export const commandRegistry: CommandDefinition[] = [
     description: "AI Native 工作方式",
     functionKey: "F6",
     physicalKey: "F6",
-    keyObjectName: "git",
+    keyObjectName: COMMAND_KEY_OBJECTS.loop,
     module: "loop",
   },
   {
@@ -371,7 +372,7 @@ export const commandRegistry: CommandDefinition[] = [
     description: "联系方式",
     functionKey: "F7",
     physicalKey: "F7",
-    keyObjectName: "github",
+    keyObjectName: COMMAND_KEY_OBJECTS.contact,
     module: "contact",
   },
   {
@@ -382,7 +383,7 @@ export const commandRegistry: CommandDefinition[] = [
     description: "打印或导出简历",
     functionKey: "F8",
     physicalKey: "F8",
-    keyObjectName: "vercel",
+    keyObjectName: COMMAND_KEY_OBJECTS.resume,
     module: "contact",
   },
 ];

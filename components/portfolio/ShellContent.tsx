@@ -8,7 +8,6 @@ import {
   Download,
   Mail,
   Phone,
-  RotateCcw,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
@@ -62,17 +61,17 @@ function HomeView({ onExecute }: { onExecute: (command: string) => void }) {
           或在下方输入一条命令。
         </p>
       </div>
-      <div className="home-command-grid">
+      <div className="home-command-list">
         {commandRegistry.slice(0, 6).map((command) => (
           <button
             type="button"
             key={command.id}
             onClick={() => onExecute(command.command)}
           >
-            <span>{command.functionKey}</span>
+            <span>&gt; {command.functionKey}</span>
             <strong>{command.command}</strong>
             <small>{command.description}</small>
-            <ArrowDownRight aria-hidden="true" />
+            <ArrowRight aria-hidden="true" />
           </button>
         ))}
       </div>
@@ -84,7 +83,6 @@ function WhoamiView() {
   return (
     <motion.div className="shell-view whoami-view" {...panelMotion}>
       <div className="pixel-avatar-shell">
-        <div className="pixel-noise" aria-hidden="true" />
         <Image
           className="identity-avatar"
           src={`${ASSET_BASE_PATH}/character-intro3d-v2.png`}
@@ -166,6 +164,7 @@ function ExperienceIndex({
               <small>
                 {experience.department} · {experience.role}
               </small>
+              <p>{experience.summary}</p>
             </span>
             <time>{experience.period}</time>
             <ArrowRight aria-hidden="true" />
@@ -193,7 +192,7 @@ function ExperienceDetail({
           <span>EXECUTION LOG</span>
           <strong>RUNNING</strong>
         </div>
-        {experience.logs.map((log, index) => (
+        {experience.logs.slice(0, 5).map((log, index) => (
           <motion.div
             key={log}
             initial={{ opacity: 0, x: -8 }}
@@ -215,15 +214,6 @@ function ExperienceDetail({
           </h2>
           <strong>{experience.role}</strong>
         </header>
-        <p>{experience.summary}</p>
-        <div className="experience-work">
-          <span>WORK</span>
-          <ul>
-            {experience.responsibilities.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
         <div className="result-metrics">
           {experience.highlights.map((highlight) => (
             <div key={highlight.label}>
@@ -233,6 +223,15 @@ function ExperienceDetail({
               {highlight.change ? <em>{highlight.change}</em> : null}
             </div>
           ))}
+        </div>
+        <p className="experience-conclusion">{experience.summary}</p>
+        <div className="experience-work">
+          <span>ACTION</span>
+          <ul>
+            {experience.responsibilities.slice(0, 3).map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
         </div>
         <div className="capability-line">
           {experience.capabilities.map((capability) => (
@@ -265,6 +264,7 @@ function ProjectsIndex({
             <span className="project-number">0{index + 1}</span>
             <small>{project.kicker}</small>
             <strong>{project.name}</strong>
+            <p>{project.problem}</p>
             <div>
               <em>{project.metric}</em>
               <span>{project.metricLabel}</span>
@@ -293,27 +293,25 @@ function ProjectDetail({ id }: { id: string }) {
         </div>
       </header>
       <div className="project-detail-grid">
-        <section>
-          <span>PROBLEM</span>
+        <section className="project-context">
+          <span>PROBLEM / ROLE</span>
           <p>{project.problem}</p>
+          <strong>{project.role}</strong>
         </section>
-        <section>
-          <span>ACTION</span>
+        <section className="project-outcome">
+          <span>ACTION / RESULT</span>
           <ul>
-            {project.actions.map((action) => (
+            {project.actions.slice(0, 3).map((action) => (
               <li key={action}>{action}</li>
             ))}
           </ul>
-        </section>
-        <section>
-          <span>RESULT</span>
-          <ul>
+          <ul className="project-result-list">
             {project.results.map((result) => (
               <li key={result}>{result}</li>
             ))}
           </ul>
         </section>
-        <section>
+        <section className="project-assets">
           <span>ASSETS</span>
           <div className="asset-tags">
             {project.assets.map((asset) => (
@@ -336,6 +334,7 @@ function SkillsView({
 }: {
   onHighlightCapability: (capability: CapabilityEvidence | null) => void;
 }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
   return (
     <motion.div className="shell-view skills-view" {...panelMotion}>
       <header className="shell-section-heading">
@@ -351,15 +350,39 @@ function SkillsView({
             onMouseLeave={() => onHighlightCapability(null)}
             onFocus={() => onHighlightCapability(capability)}
             onBlur={() => onHighlightCapability(null)}
+            onClick={() =>
+              setExpanded((current) =>
+                current === capability.id ? null : capability.id,
+              )
+            }
+            aria-expanded={expanded === capability.id}
           >
-            <span>{capability.label}</span>
+            <span>
+              {capability.label}
+              <small>
+                {expanded === capability.id ? "COLLAPSE" : "EVIDENCE +"}
+              </small>
+            </span>
             <p>{capability.description}</p>
-            <ul>
-              {capability.evidence.map((evidence) => (
-                <li key={evidence}>{evidence}</li>
+            <div className="skill-snapshot">
+              {capability.evidence.slice(0, 2).map((evidence) => (
+                <strong key={evidence}>{evidence}</strong>
               ))}
-            </ul>
+            </div>
             <small>{capability.relatedExperiences.join(" / ")}</small>
+            <AnimatePresence initial={false}>
+              {expanded === capability.id ? (
+                <motion.ul
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                >
+                  {capability.evidence.map((evidence) => (
+                    <li key={evidence}>{evidence}</li>
+                  ))}
+                </motion.ul>
+              ) : null}
+            </AnimatePresence>
           </button>
         ))}
       </div>
@@ -416,14 +439,16 @@ function EvalView() {
 }
 
 function LoopView() {
-  const nodes = [
-    ["RESEARCH", "研究"],
-    ["REQUIREMENT", "需求"],
-    ["PRD", "定义"],
-    ["DEMO", "验证"],
-    ["REVIEW", "评审"],
-    ["EVALUATE", "评测"],
-    ["ITERATE", "迭代"],
+  const topNodes = [
+    ["RESEARCH", "研究问题"],
+    ["REQUIREMENT", "定义需求"],
+    ["PRD", "收敛方案"],
+    ["DEMO", "快速验证"],
+  ];
+  const bottomNodes = [
+    ["ITERATE", "继续迭代"],
+    ["EVALUATE", "客观评测"],
+    ["REVIEW", "独立评审"],
   ];
   return (
     <motion.div className="shell-view loop-view" {...panelMotion}>
@@ -432,20 +457,43 @@ function LoopView() {
         <h2>让工作流自己发现、验证并推进。</h2>
       </header>
       <div className="loop-flow">
-        {nodes.map(([english, chinese], index) => (
-          <motion.div
-            key={english}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <span>0{index + 1}</span>
-            <strong>{english}</strong>
-            <small>{chinese}</small>
-            {index < nodes.length - 1 ? <ArrowRight aria-hidden="true" /> : null}
-          </motion.div>
-        ))}
-        <RotateCcw className="loop-return" aria-label="持续迭代" />
+        <div className="loop-row loop-row-forward">
+          {topNodes.map(([english, chinese], index) => (
+            <motion.div
+              key={english}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <span>0{index + 1}</span>
+              <strong>{english}</strong>
+              <small>{chinese}</small>
+              {index < topNodes.length - 1 ? (
+                <ArrowRight aria-hidden="true" />
+              ) : null}
+            </motion.div>
+          ))}
+        </div>
+        <div className="loop-turn" aria-hidden="true">
+          ↓
+        </div>
+        <div className="loop-row loop-row-return">
+          {bottomNodes.map(([english, chinese], index) => (
+            <motion.div
+              key={english}
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: (index + 4) * 0.1 }}
+            >
+              <span>0{7 - index}</span>
+              <strong>{english}</strong>
+              <small>{chinese}</small>
+              {index > 0 ? (
+                <ArrowRight className="loop-arrow-back" aria-hidden="true" />
+              ) : null}
+            </motion.div>
+          ))}
+        </div>
       </div>
       <div className="loop-principles">
         <p>Agent 负责研究与信息整理</p>

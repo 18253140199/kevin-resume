@@ -17,6 +17,7 @@ import {
   useState,
 } from "react";
 import { KeyboardScene } from "@/components/keyboard/KeyboardScene";
+import { KeyboardSceneBoundary } from "@/components/keyboard/KeyboardSceneBoundary";
 import { StaticKeyboard } from "@/components/keyboard/StaticKeyboard";
 import { PrintableResume } from "@/components/portfolio/PrintableResume";
 import { ShellContent } from "@/components/portfolio/ShellContent";
@@ -26,8 +27,14 @@ import {
   experiences,
   profile,
 } from "@/data/portfolio";
+import {
+  CHARACTER_KEY_OBJECTS,
+  COMMAND_KEY_OBJECTS,
+  normalizeKeyObjectName,
+} from "@/components/keyboard/keyboard-config";
 import { useCommandEngine } from "@/hooks/use-command-engine";
 import { useKeyboardAudio } from "@/hooks/use-keyboard-audio";
+import { useKeyboardTypingSequence } from "@/hooks/use-keyboard-typing-sequence";
 import { usePerformanceProfile } from "@/hooks/use-performance-profile";
 import type {
   CapabilityEvidence,
@@ -35,6 +42,7 @@ import type {
 } from "@/types/portfolio";
 
 const BOOT_KEY = "kevin-shell:booted";
+const VISUAL_KEY_FALLBACKS = Object.values(COMMAND_KEY_OBJECTS);
 const bootLines = [
   "identity loaded",
   "experience loaded",
@@ -46,19 +54,56 @@ const bootLines = [
 export function PortfolioStage() {
   const performance = usePerformanceProfile();
   const audio = useKeyboardAudio();
+  const audioRef = useRef(audio);
   const { state, execute, bootComplete } = useCommandEngine(
     performance.reducedMotion,
   );
   const keyboardRef = useRef<KeyboardSceneController>(null);
   const autoplayRef = useRef<AbortController | null>(null);
+  const introRef = useRef<AbortController | null>(null);
+  const { play: playTyping, cancel: cancelTyping } =
+    useKeyboardTypingSequence();
   const [input, setInput] = useState("");
   const [isComposing, setIsComposing] = useState(false);
   const [bootProgress, setBootProgress] = useState(0);
   const [skipBootVisible, setSkipBootVisible] = useState(true);
+  const [bootTyping, setBootTyping] = useState(false);
   const [splineReady, setSplineReady] = useState(false);
   const [splineFailed, setSplineFailed] = useState(false);
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const [autoplay, setAutoplay] = useState(false);
+
+  useEffect(() => {
+    audioRef.current = audio;
+  }, [audio]);
+
+  const typeCommand = useCallback(
+    (command: string, signal: AbortSignal, intervalMs = 72) =>
+      playTyping({
+        text: command,
+        signal,
+        intervalMs,
+        onInput: setInput,
+        onPress: (character, index) => {
+          const preferred =
+            CHARACTER_KEY_OBJECTS[character] ??
+            VISUAL_KEY_FALLBACKS[index % VISUAL_KEY_FALLBACKS.length];
+          let pressedKey = preferred;
+          if (!keyboardRef.current?.pressKey(preferred)) {
+            pressedKey =
+              VISUAL_KEY_FALLBACKS[index % VISUAL_KEY_FALLBACKS.length];
+            keyboardRef.current?.pressKey(pressedKey);
+          }
+          audioRef.current.playPress();
+          return pressedKey;
+        },
+        onRelease: (keyObjectName) => {
+          keyboardRef.current?.releaseKey(keyObjectName);
+          audioRef.current.playRelease();
+        },
+      }),
+    [playTyping],
+  );
 
   useEffect(() => {
     if (!performance.ready) return;
@@ -77,25 +122,62 @@ export function PortfolioStage() {
       return () => window.clearTimeout(immediateBoot);
     }
 
-    let index = 0;
-    const timer = window.setInterval(() => {
-      index += 1;
-      setBootProgress(index);
-      if (index >= bootLines.length) {
-        window.clearInterval(timer);
-        window.setTimeout(() => {
-          try {
-            sessionStorage.setItem(BOOT_KEY, "yes");
-          } catch {
-            // Session storage is optional.
-          }
-          setSkipBootVisible(false);
-          bootComplete();
-        }, 520);
+    const controller = new AbortController();
+    introRef.current = controller;
+    const wait = (ms: number) =>
+      new Promise<void>((resolve) => {
+        const timer = window.setTimeout(resolve, ms);
+        controller.signal.addEventListener(
+          "abort",
+          () => {
+            window.clearTimeout(timer);
+            resolve();
+          },
+          { once: true },
+        );
+      });
+
+    void (async () => {
+      for (let index = 0; index < bootLines.length; index += 1) {
+        await wait(310);
+        if (controller.signal.aborted) return;
+        setBootProgress(index + 1);
       }
-    }, 260);
-    return () => window.clearInterval(timer);
-  }, [bootComplete, performance.ready, performance.reducedMotion]);
+      await wait(520);
+      if (controller.signal.aborted) return;
+      setBootTyping(true);
+      const typed = await typeCommand("whoami", controller.signal, 185);
+      if (!typed || controller.signal.aborted) return;
+      keyboardRef.current?.pressKey(COMMAND_KEY_OBJECTS.whoami);
+      audioRef.current.playExecute();
+      await wait(110);
+      keyboardRef.current?.releaseKey(COMMAND_KEY_OBJECTS.whoami);
+      const result = await execute("whoami");
+      if (!result.ok || controller.signal.aborted) return;
+      audioRef.current.playComplete();
+      setInput("");
+      setBootTyping(false);
+      setSkipBootVisible(false);
+      try {
+        sessionStorage.setItem(BOOT_KEY, "yes");
+      } catch {
+        // Session storage is optional.
+      }
+    })();
+
+    return () => {
+      controller.abort();
+      cancelTyping();
+      if (introRef.current === controller) introRef.current = null;
+    };
+  }, [
+    bootComplete,
+    cancelTyping,
+    execute,
+    performance.ready,
+    performance.reducedMotion,
+    typeCommand,
+  ]);
 
   useEffect(() => {
     keyboardRef.current?.setSceneMode(state.module);
@@ -112,8 +194,11 @@ export function PortfolioStage() {
   const runCommand = useCallback(
     async (rawCommand: string, userInitiated = true) => {
       if (userInitiated) {
+        introRef.current?.abort();
         autoplayRef.current?.abort();
         autoplayRef.current = null;
+        cancelTyping();
+        setBootTyping(false);
         setAutoplay(false);
       }
 
@@ -145,30 +230,57 @@ export function PortfolioStage() {
           "experience --open meituan",
           "project radar-eval",
           "skills",
+          "eval",
           "loop",
           "contact",
         ];
-        for (const command of sequence) {
-          if (controller.signal.aborted) break;
-          await execute(command);
-          audio.playComplete();
-          await new Promise<void>((resolve) => {
-            const timer = window.setTimeout(
-              resolve,
-              performance.reducedMotion ? 500 : 5200,
+        try {
+          for (const command of sequence) {
+            if (controller.signal.aborted) break;
+            const typed = await typeCommand(
+              command,
+              controller.signal,
+              performance.reducedMotion ? 0 : 58,
             );
-            controller.signal.addEventListener(
-              "abort",
-              () => {
-                window.clearTimeout(timer);
-                resolve();
-              },
-              { once: true },
+            if (!typed || controller.signal.aborted) break;
+            const definition = commandRegistry.find(
+              (item) =>
+                item.command === command ||
+                command.startsWith(`${item.command} `) ||
+                (item.command === "projects" && command.startsWith("project ")),
             );
-          });
+            if (definition) {
+              keyboardRef.current?.pressKey(definition.keyObjectName);
+              window.setTimeout(
+                () =>
+                  keyboardRef.current?.releaseKey(definition.keyObjectName),
+                90,
+              );
+            }
+            audio.playExecute();
+            const result = await execute(command);
+            if (result.ok) audio.playComplete();
+            setInput("");
+            await new Promise<void>((resolve) => {
+              const timer = window.setTimeout(
+                resolve,
+                performance.reducedMotion ? 350 : 3600,
+              );
+              controller.signal.addEventListener(
+                "abort",
+                () => {
+                  window.clearTimeout(timer);
+                  resolve();
+                },
+                { once: true },
+              );
+            });
+          }
+        } finally {
+          if (!controller.signal.aborted) setInput("");
+          setAutoplay(false);
+          if (autoplayRef.current === controller) autoplayRef.current = null;
         }
-        setAutoplay(false);
-        autoplayRef.current = null;
         return;
       }
 
@@ -183,7 +295,7 @@ export function PortfolioStage() {
       }
       setInput("");
     },
-    [audio, execute, performance.reducedMotion],
+    [audio, cancelTyping, execute, performance.reducedMotion, typeCommand],
   );
 
   useEffect(() => {
@@ -250,7 +362,9 @@ export function PortfolioStage() {
 
   const keyObjectToCommand = useCallback(
     (objectName: string) =>
-      commandRegistry.find((item) => item.keyObjectName === objectName),
+      commandRegistry.find(
+        (item) => item.keyObjectName === normalizeKeyObjectName(objectName),
+      ),
     [],
   );
 
@@ -260,12 +374,16 @@ export function PortfolioStage() {
   };
 
   const skipBoot = () => {
+    introRef.current?.abort();
+    cancelTyping();
     try {
       sessionStorage.setItem(BOOT_KEY, "yes");
     } catch {
       // Session storage is optional.
     }
     setBootProgress(bootLines.length);
+    setBootTyping(false);
+    setInput("");
     setSkipBootVisible(false);
     bootComplete();
   };
@@ -276,7 +394,11 @@ export function PortfolioStage() {
     !splineFailed;
 
   return (
-    <main className="portfolio-stage" data-module={state.module}>
+    <main
+      className="portfolio-stage"
+      data-module={state.module}
+      data-safe-mode={!show3D}
+    >
       <div className="ambient-grid" />
       <div className="ambient-scanline" />
 
@@ -306,16 +428,18 @@ export function PortfolioStage() {
               type="button"
               onClick={() => {
                 autoplayRef.current?.abort();
+                cancelTyping();
+                setInput("");
                 setAutoplay(false);
               }}
             >
               <SkipForward aria-hidden="true" />
-              停止演示
+              STOP
             </button>
           ) : (
             <button type="button" onClick={() => void runCommand("demo")}>
               <Command aria-hidden="true" />
-              自动演示
+              DEMO
             </button>
           )}
           <button
@@ -370,7 +494,7 @@ export function PortfolioStage() {
                 exit={{ opacity: 0, filter: "blur(8px)" }}
               >
                 <span className="terminal-label">KEVIN RESUME OS</span>
-                <h1>Version 2.0.0</h1>
+                <h1>Version 2.1.0</h1>
                 <div className="boot-command">&gt; boot kevin</div>
                 <div className="boot-lines">
                   {bootLines.map((line, index) => (
@@ -390,7 +514,9 @@ export function PortfolioStage() {
                 </div>
                 <div className="boot-ready">
                   {bootProgress >= bootLines.length
-                    ? "System ready. Executing whoami..."
+                    ? bootTyping
+                      ? "System ready. Typing first command..."
+                      : "System ready."
                     : "Loading local modules..."}
                 </div>
               </motion.div>
@@ -417,7 +543,7 @@ export function PortfolioStage() {
           </AnimatePresence>
         </div>
 
-        {state.mode !== "boot" ? (
+        {state.mode !== "boot" || bootTyping ? (
           <form className="shell-prompt" onSubmit={submit}>
             <label htmlFor="command-input">
               <span>kevin@resume</span>:<strong>~</strong>$
@@ -425,7 +551,15 @@ export function PortfolioStage() {
             <input
               id="command-input"
               value={input}
-              onChange={(event) => setInput(event.target.value)}
+              onChange={(event) => {
+                introRef.current?.abort();
+                autoplayRef.current?.abort();
+                cancelTyping();
+                setAutoplay(false);
+                if (state.mode === "boot") bootComplete();
+                setBootTyping(false);
+                setInput(event.target.value);
+              }}
               onCompositionStart={() => setIsComposing(true)}
               onCompositionEnd={() => setIsComposing(false)}
               autoComplete="off"
@@ -448,39 +582,55 @@ export function PortfolioStage() {
       <section className="keyboard-zone" aria-label="3D 简历命令键盘">
         <div className="keyboard-zone-glow" />
         {show3D ? (
-          <KeyboardScene
-            ref={keyboardRef}
-            maxDpr={performance.maxDpr}
-            mode={state.module}
-            onReady={() => setSplineReady(true)}
-            onFailure={() => {
+          <KeyboardSceneBoundary
+            onError={() => {
               setSplineFailed(true);
               setSplineReady(false);
             }}
-            onKeyPress={(objectName) => {
-              audio.playPress();
-              const command = keyObjectToCommand(objectName);
-              if (command) void runCommand(command.command);
-            }}
-            onKeyRelease={() => audio.playRelease()}
-            onKeyHover={(objectName) => {
-              const command = objectName
-                ? keyObjectToCommand(objectName)
-                : undefined;
-              const capability = objectName
-                ? capabilities.find(
-                    (item) => item.keyObjectName === objectName,
-                  )
-                : undefined;
-              setHoveredKey(
-                command
-                  ? `${command.functionKey} / ${command.label} — ${command.description}`
-                  : capability
-                    ? `${capability.label} — ${capability.description}`
-                    : null,
-              );
-            }}
-          />
+            fallback={
+              <StaticKeyboard
+                activeCommand={state.activeCommand}
+                onCommand={(command) => void runCommand(command)}
+              />
+            }
+          >
+            <KeyboardScene
+              ref={keyboardRef}
+              maxDpr={performance.maxDpr}
+              mode={state.module}
+              onReady={() => setSplineReady(true)}
+              onFailure={() => {
+                setSplineFailed(true);
+                setSplineReady(false);
+              }}
+              onKeyPress={(objectName) => {
+                audio.playPress();
+                const command = keyObjectToCommand(objectName);
+                if (command) void runCommand(command.command);
+              }}
+              onKeyRelease={() => audio.playRelease()}
+              onKeyHover={(objectName) => {
+                const command = objectName
+                  ? keyObjectToCommand(objectName)
+                  : undefined;
+                const normalizedName = objectName
+                  ? normalizeKeyObjectName(objectName)
+                  : null;
+                const capability = normalizedName
+                  ? capabilities.find(
+                      (item) => item.keyObjectName === normalizedName,
+                    )
+                  : undefined;
+                setHoveredKey(
+                  command
+                    ? `${command.functionKey} / ${command.label} — ${command.description}`
+                    : capability
+                      ? `${capability.label} — ${capability.description}`
+                      : null,
+                );
+              }}
+            />
+          </KeyboardSceneBoundary>
         ) : (
           <StaticKeyboard
             compact={performance.isMobile}
@@ -497,24 +647,25 @@ export function PortfolioStage() {
         </div>
       </section>
 
-      <nav className="command-dock" aria-label="快捷命令">
-        {commandRegistry.slice(0, 7).map((command) => (
-          <button
-            type="button"
-            key={command.id}
-            className={state.activeCommand === command.command ? "active" : ""}
-            onClick={() => void runCommand(command.command)}
-          >
-            <span>{command.functionKey}</span>
-            {command.label}
-          </button>
-        ))}
-      </nav>
+      {!show3D || state.module === "help" ? (
+        <nav className="command-dock" aria-label="快捷命令">
+          {commandRegistry.slice(0, 7).map((command) => (
+            <button
+              type="button"
+              key={command.id}
+              className={state.activeCommand === command.command ? "active" : ""}
+              onClick={() => void runCommand(command.command)}
+            >
+              <span>{command.functionKey}</span>
+              {command.label}
+            </button>
+          ))}
+        </nav>
+      ) : null}
 
       <div className="stage-corner-data" aria-hidden="true">
-        <span>LAT 39.9042</span>
-        <span>LON 116.4074</span>
-        <span>BUILD KEVIN-SHELL 2.0</span>
+        <span>BUILD KEVIN-SHELL 2.1</span>
+        <span>SESSION 2026</span>
       </div>
 
       <a className="screen-reader-contact" href={`mailto:${profile.email}`}>

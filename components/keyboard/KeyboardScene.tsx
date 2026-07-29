@@ -11,7 +11,10 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { KEYBOARD_MODES } from "@/components/keyboard/keyboard-config";
+import {
+  KEYBOARD_MODES,
+  LEGACY_KEY_OBJECTS,
+} from "@/components/keyboard/keyboard-config";
 import type {
   KeyboardSceneController,
   PortfolioModule,
@@ -68,14 +71,22 @@ export const KeyboardScene = forwardRef<
   const highlightTweensRef = useRef<gsap.core.Tween[]>([]);
 
   const getObject = useCallback(
-    (objectName: string) => app?.findObjectByName(objectName),
+    (objectName: string) => {
+      const direct = app?.findObjectByName(objectName);
+      if (direct) return direct;
+      for (const legacyName of LEGACY_KEY_OBJECTS[objectName] ?? []) {
+        const legacyObject = app?.findObjectByName(legacyName);
+        if (legacyObject) return legacyObject;
+      }
+      return undefined;
+    },
     [app],
   );
 
   const pressKey = useCallback(
     (objectName: string) => {
       const object = getObject(objectName);
-      if (!object) return;
+      if (!object) return false;
       if (!baselinesRef.current.has(objectName)) {
         baselinesRef.current.set(objectName, object.position.y);
       }
@@ -86,6 +97,7 @@ export const KeyboardScene = forwardRef<
         duration: 0.08,
         ease: "power2.out",
       });
+      return true;
     },
     [getObject],
   );
@@ -93,7 +105,7 @@ export const KeyboardScene = forwardRef<
   const releaseKey = useCallback(
     (objectName: string) => {
       const object = getObject(objectName);
-      if (!object) return;
+      if (!object) return false;
       const baseline = baselinesRef.current.get(objectName) ?? object.position.y;
       gsap.killTweensOf(object.position);
       gsap.to(object.position, {
@@ -101,6 +113,7 @@ export const KeyboardScene = forwardRef<
         duration: 0.32,
         ease: "elastic.out(1, 0.42)",
       });
+      return true;
     },
     [getObject],
   );

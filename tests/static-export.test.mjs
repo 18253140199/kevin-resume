@@ -10,6 +10,7 @@ test("exports a complete GitHub Pages site", async () => {
 
   assert.match(html, /<title>Kevin Shell｜杨泽存 · Agent 产品经理<\/title>/);
   assert.match(html, /KEVIN SHELL/);
+  assert.match(html, /Version 2\.1\.0/);
   assert.match(html, /Radar Agent/);
   assert.match(
     html,

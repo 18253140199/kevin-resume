@@ -39,7 +39,8 @@ test("server-renders the finished interactive resume", async () => {
 });
 
 test("keeps interaction, accessibility, and sharing assets wired", async () => {
-  const [stage, keyboard, engine, css, layout] = await Promise.all([
+  const [stage, keyboard, keyboardConfig, typing, engine, shell, css, layout] =
+    await Promise.all([
     readFile(
       new URL("../components/portfolio/PortfolioStage.tsx", import.meta.url),
       "utf8",
@@ -49,7 +50,19 @@ test("keeps interaction, accessibility, and sharing assets wired", async () => {
       "utf8",
     ),
     readFile(
+      new URL("../components/keyboard/keyboard-config.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../hooks/use-keyboard-typing-sequence.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
       new URL("../hooks/use-command-engine.ts", import.meta.url),
+      "utf8",
+    ),
+    readFile(
+      new URL("../components/portfolio/ShellContent.tsx", import.meta.url),
       "utf8",
     ),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
@@ -58,18 +71,34 @@ test("keeps interaction, accessibility, and sharing assets wired", async () => {
 
   assert.match(stage, /window\.addEventListener\("keydown"/);
   assert.match(stage, /onCompositionStart/);
+  assert.match(stage, /experience --open meituan/);
+  assert.match(stage, /project radar-eval/);
+  assert.match(stage, /"eval"/);
   assert.match(stage, /StaticKeyboard/);
   assert.match(stage, /window\.print\(\)/);
   assert.match(keyboard, /addEventListener\("keyDown"/);
   assert.match(keyboard, /assets\/skills-keyboard\.splinecode/);
   assert.match(keyboard, /visibilitychange/);
   assert.match(keyboard, /setPixelRatio/);
+  assert.match(keyboard, /LEGACY_KEY_OBJECTS/);
+  assert.match(keyboardConfig, /cmd-whoami/);
+  assert.match(keyboardConfig, /cmd-resume/);
+  assert.match(keyboardConfig, /"cmd-whoami": \["js"\]/);
+  assert.match(typing, /AbortController/);
+  assert.match(typing, /onInput\(text\.slice/);
   assert.match(engine, /AbortController/);
   assert.match(engine, /command not found/);
   assert.match(css, /height:\s*100dvh/);
   assert.match(css, /overflow:\s*hidden/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
   assert.match(css, /@media \(max-width: 760px\)/);
+  assert.match(css, /height:\s*clamp\(310px,\s*44dvh,\s*440px\)/);
+  assert.match(css, /\.keyboard-zone\s*{[\s\S]*?top:\s*43dvh/);
+  assert.match(shell, /home-command-list/);
+  assert.doesNotMatch(shell, /home-command-grid/);
+  assert.match(shell, /aria-expanded/);
+  assert.match(shell, /loop-row-forward/);
+  assert.match(shell, /loop-row-return/);
   assert.match(layout, /openGraph:/);
   assert.match(layout, /\/og\.png/);
 

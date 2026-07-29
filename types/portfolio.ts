@@ -77,8 +77,8 @@ export type CommandDefinition = {
 };
 
 export type KeyboardSceneController = {
-  pressKey: (objectName: string) => void;
-  releaseKey: (objectName: string) => void;
+  pressKey: (objectName: string) => boolean;
+  releaseKey: (objectName: string) => boolean;
   highlightKeys: (objectNames: string[]) => void;
   clearHighlights: () => void;
   setSceneMode: (mode: PortfolioModule) => void;

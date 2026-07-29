@@ -20,6 +20,12 @@ help       demo         home       clear
 
 桌面端使用 Spline 3D 键盘；移动端、Reduced Motion 和 Data Saver 环境自动切换为 HTML 宏键盘。所有核心内容均保留 DOM 版本，支持键盘操作、静态导出和完整简历打印。
 
+## Spline 对象名
+
+2.1 代码使用 `cmd-whoami`、`cmd-experience`、`cmd-projects`、`cmd-skills`、`cmd-eval`、`cmd-loop`、`cmd-contact`、`cmd-resume` 作为标准对象名。当前 Spline 二进制保持不变，运行时会自动兼容原来的 `js`、`react`、`nextjs`、`ts`、`docker`、`git`、`github`、`vercel`。
+
+下次在 Spline 编辑器中维护场景时，可按上述顺序重命名键帽对象；发布前逐个检查 Key Down、Key Up 和 Hover 事件，不需要修改网页代码。
+
 ## 本地运行
 
 ```bash

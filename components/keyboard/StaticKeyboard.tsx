@@ -13,13 +13,22 @@ export function StaticKeyboard({
   onCommand,
   compact = false,
 }: StaticKeyboardProps) {
+  const commands = compact ? commandRegistry.slice(0, 6) : commandRegistry;
+  const compactLabels: Record<string, string> = {
+    whoami: "WHO",
+    experience: "EXP",
+    projects: "WORK",
+    skills: "SKILL",
+    eval: "EVAL",
+    loop: "LOOP",
+  };
   return (
     <div
       className={`static-keyboard ${compact ? "static-keyboard-compact" : ""}`}
       aria-label="简历命令键盘"
     >
       <div className="static-keyboard-deck">
-        {commandRegistry.map((command) => (
+        {commands.map((command) => (
           <button
             type="button"
             key={command.id}
@@ -27,7 +36,9 @@ export function StaticKeyboard({
             onClick={() => onCommand(command.command)}
           >
             <span>{command.functionKey}</span>
-            <strong>{command.label}</strong>
+            <strong>
+              {compact ? compactLabels[command.command] : command.label}
+            </strong>
           </button>
         ))}
       </div>
