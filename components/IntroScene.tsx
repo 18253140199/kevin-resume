@@ -21,6 +21,7 @@ type MatchPhase =
 type Point = { x: number; y: number };
 
 const BURN_DURATION = 4300;
+const ASSET_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 function makeAudioController() {
   let context: AudioContext | null = null;
@@ -411,12 +412,12 @@ export function IntroScene() {
         <div className="puppet-rig">
           <img
             className="character-image character-dark"
-            src="/character-intro3d.png"
+            src={`${ASSET_BASE_PATH}/character-intro3d.png`}
             alt=""
           />
           <img
             className="character-image character-lit"
-            src="/character-intro3d.png"
+            src={`${ASSET_BASE_PATH}/character-intro3d.png`}
             alt=""
           />
         </div>

@@ -1,45 +1,40 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import "./globals.css";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("host") ?? "localhost:3000";
-  const protocol =
-    requestHeaders.get("x-forwarded-proto") ??
-    (host.startsWith("localhost") ? "http" : "https");
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
-  return {
-    metadataBase: new URL(`${protocol}://${host}`),
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  title: "请点燃我｜杨泽存 · Agent 产品经理",
+  description:
+    "一份以火柴点燃为核心交互的个人简历。认识杨泽存如何构建、评测与治理 Agent。",
+  openGraph: {
     title: "请点燃我｜杨泽存 · Agent 产品经理",
-    description:
-      "一份以火柴点燃为核心交互的个人简历。认识杨泽存如何构建、评测与治理 Agent。",
-    openGraph: {
-      title: "请点燃我｜杨泽存 · Agent 产品经理",
-      description: "Strike a Match, Know My Story.",
-      type: "website",
-      locale: "zh_CN",
-      images: [
-        {
-          url: "/og.png",
-          width: 1200,
-          height: 630,
-          alt: "请点燃我 - 杨泽存 Agent 产品经理",
-        },
-      ],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: "请点燃我｜杨泽存 · Agent 产品经理",
-      description: "Strike a Match, Know My Story.",
-      images: ["/og.png"],
-    },
-    icons: {
-      icon: "/character-intro3d.png",
-      shortcut: "/character-intro3d.png",
-    },
-  };
-}
+    description: "Strike a Match, Know My Story.",
+    type: "website",
+    locale: "zh_CN",
+    images: [
+      {
+        url: `${basePath}/og.png`,
+        width: 1200,
+        height: 630,
+        alt: "请点燃我 - 杨泽存 Agent 产品经理",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "请点燃我｜杨泽存 · Agent 产品经理",
+    description: "Strike a Match, Know My Story.",
+    images: [`${basePath}/og.png`],
+  },
+  icons: {
+    icon: `${basePath}/character-intro3d.png`,
+    shortcut: `${basePath}/character-intro3d.png`,
+  },
+};
 
 export default function RootLayout({
   children,
