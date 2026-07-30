@@ -76,7 +76,13 @@ test("keeps interaction, accessibility, and sharing assets wired", async () => {
   assert.match(stage, /"eval"/);
   assert.match(stage, /StaticKeyboard/);
   assert.match(stage, /window\.print\(\)/);
-  assert.match(keyboard, /addEventListener\("keyDown"/);
+  assert.match(keyboard, /addEventListener\("mouseHover"/);
+  assert.match(keyboard, /event\.target\.id/);
+  assert.match(keyboard, /getSplineEvents\(\)\.mouseHover/);
+  assert.match(keyboard, /objectByIdRef/);
+  assert.match(keyboard, /pointerKeyObjectsRef/);
+  assert.match(keyboard, /addEventListener\("pointerdown"/);
+  assert.doesNotMatch(keyboard, /addEventListener\("keyDown"/);
   assert.match(keyboard, /assets\/skills-keyboard\.splinecode/);
   assert.match(keyboard, /visibilitychange/);
   assert.match(keyboard, /setPixelRatio/);

@@ -23,6 +23,10 @@ import type {
 const Spline = React.lazy(() => import("@splinetool/react-spline"));
 const ASSET_BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
+type SplineObjectWithParent = SPEObject & {
+  parentUuid?: string;
+};
+
 type KeyboardSceneProps = {
   maxDpr: number;
   mode: PortfolioModule;
@@ -68,6 +72,13 @@ export const KeyboardScene = forwardRef<
 ) {
   const [app, setApp] = useState<Application | null>(null);
   const baselinesRef = useRef(new Map<string, number>());
+  const objectByIdRef = useRef(new Map<string, SplineObjectWithParent>());
+  const pointerKeyObjectsRef = useRef(
+    new Map<string, SplineObjectWithParent>(),
+  );
+  const hoveredKeyRef = useRef<SplineObjectWithParent | null>(null);
+  const pressedPointerKeyRef = useRef<SplineObjectWithParent | null>(null);
+  const hoverFrameRef = useRef<number | null>(null);
   const highlightTweensRef = useRef<gsap.core.Tween[]>([]);
 
   const getObject = useCallback(
@@ -83,39 +94,57 @@ export const KeyboardScene = forwardRef<
     [app],
   );
 
-  const pressKey = useCallback(
-    (objectName: string) => {
-      const object = getObject(objectName);
-      if (!object) return false;
-      if (!baselinesRef.current.has(objectName)) {
-        baselinesRef.current.set(objectName, object.position.y);
-      }
-      const baseline = baselinesRef.current.get(objectName) ?? object.position.y;
+  const getBaseline = useCallback((object: SPEObject) => {
+    if (!baselinesRef.current.has(object.uuid)) {
+      baselinesRef.current.set(object.uuid, object.position.y);
+    }
+    return baselinesRef.current.get(object.uuid) ?? object.position.y;
+  }, []);
+
+  const animateKeyDown = useCallback(
+    (object: SPEObject) => {
+      const baseline = getBaseline(object);
       gsap.killTweensOf(object.position);
       gsap.to(object.position, {
         y: baseline - 22,
         duration: 0.08,
         ease: "power2.out",
       });
+    },
+    [getBaseline],
+  );
+
+  const animateKeyUp = useCallback(
+    (object: SPEObject) => {
+      const baseline = getBaseline(object);
+      gsap.killTweensOf(object.position);
+      gsap.to(object.position, {
+        y: baseline,
+        duration: 0.24,
+        ease: "power2.out",
+      });
+    },
+    [getBaseline],
+  );
+
+  const pressKey = useCallback(
+    (objectName: string) => {
+      const object = getObject(objectName);
+      if (!object) return false;
+      animateKeyDown(object);
       return true;
     },
-    [getObject],
+    [animateKeyDown, getObject],
   );
 
   const releaseKey = useCallback(
     (objectName: string) => {
       const object = getObject(objectName);
       if (!object) return false;
-      const baseline = baselinesRef.current.get(objectName) ?? object.position.y;
-      gsap.killTweensOf(object.position);
-      gsap.to(object.position, {
-        y: baseline,
-        duration: 0.32,
-        ease: "elastic.out(1, 0.42)",
-      });
+      animateKeyUp(object);
       return true;
     },
-    [getObject],
+    [animateKeyUp, getObject],
   );
 
   const clearHighlights = useCallback(() => {
@@ -129,11 +158,7 @@ export const KeyboardScene = forwardRef<
       objectNames.forEach((objectName, index) => {
         const object = getObject(objectName);
         if (!object) return;
-        if (!baselinesRef.current.has(objectName)) {
-          baselinesRef.current.set(objectName, object.position.y);
-        }
-        const baseline =
-          baselinesRef.current.get(objectName) ?? object.position.y;
+        const baseline = getBaseline(object);
         highlightTweensRef.current.push(
           gsap.fromTo(
             object.position,
@@ -150,7 +175,53 @@ export const KeyboardScene = forwardRef<
         );
       });
     },
-    [clearHighlights, getObject],
+    [clearHighlights, getBaseline, getObject],
+  );
+
+  const resolvePointerKey = useCallback((event: SplineEvent) => {
+    let object =
+      objectByIdRef.current.get(event.target.id) ??
+      pointerKeyObjectsRef.current.get(event.target.id);
+
+    while (object) {
+      const pointerKey = pointerKeyObjectsRef.current.get(object.uuid);
+      if (pointerKey) return pointerKey;
+      object = object.parentUuid
+        ? objectByIdRef.current.get(object.parentUuid)
+        : undefined;
+    }
+    return undefined;
+  }, []);
+
+  const resetPointerKeys = useCallback(
+    (activeObject: SplineObjectWithParent | null) => {
+      pointerKeyObjectsRef.current.forEach((object) => {
+        object.state = undefined;
+        if (object.uuid === activeObject?.uuid) {
+          animateKeyDown(object);
+        } else {
+          animateKeyUp(object);
+        }
+      });
+    },
+    [animateKeyDown, animateKeyUp],
+  );
+
+  const setHoveredPointerKey = useCallback(
+    (object: SplineObjectWithParent | null) => {
+      hoveredKeyRef.current = object;
+      if (hoverFrameRef.current !== null) {
+        window.cancelAnimationFrame(hoverFrameRef.current);
+      }
+
+      // Spline's copied keycap states share child names. Reset after its own
+      // hover transition, then animate the exact key identified by UUID.
+      hoverFrameRef.current = window.requestAnimationFrame(() => {
+        resetPointerKeys(object);
+        hoverFrameRef.current = null;
+      });
+    },
+    [resetPointerKeys],
   );
 
   const setSceneMode = useCallback(
@@ -199,22 +270,37 @@ export const KeyboardScene = forwardRef<
   useEffect(() => {
     if (!app) return;
 
-    const handleDown = (event: SplineEvent) => {
-      pressKey(event.target.name);
-      onKeyPress(event.target.name);
-    };
-    const handleUp = (event: SplineEvent) => {
-      releaseKey(event.target.name);
-      onKeyRelease(event.target.name);
-    };
     const handleHover = (event: SplineEvent) => {
-      const name = event.target.name;
-      onKeyHover(name === "body" || name === "platform" ? null : name);
+      const object = resolvePointerKey(event);
+      setHoveredPointerKey(object ?? null);
+      onKeyHover(object?.name ?? null);
     };
 
-    app.addEventListener("keyDown", handleDown);
-    app.addEventListener("keyUp", handleUp);
+    const handlePointerDown = () => {
+      const object = hoveredKeyRef.current;
+      if (!object) return;
+      pressedPointerKeyRef.current = object;
+      animateKeyDown(object);
+      onKeyPress(object.name);
+    };
+    const handlePointerUp = () => {
+      const object = pressedPointerKeyRef.current;
+      if (!object) return;
+      pressedPointerKeyRef.current = null;
+      onKeyRelease(object.name);
+      if (hoveredKeyRef.current?.uuid !== object.uuid) {
+        animateKeyUp(object);
+      }
+    };
+    const handlePointerLeave = () => {
+      setHoveredPointerKey(null);
+      onKeyHover(null);
+    };
+
     app.addEventListener("mouseHover", handleHover);
+    app.canvas.addEventListener("pointerdown", handlePointerDown);
+    app.canvas.addEventListener("pointerleave", handlePointerLeave);
+    window.addEventListener("pointerup", handlePointerUp);
 
     const cleanupDpr = capSplinePixelRatio(app, maxDpr);
     const handleVisibility = () => {
@@ -224,22 +310,30 @@ export const KeyboardScene = forwardRef<
     document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
-      app.removeEventListener("keyDown", handleDown);
-      app.removeEventListener("keyUp", handleUp);
       app.removeEventListener("mouseHover", handleHover);
+      app.canvas.removeEventListener("pointerdown", handlePointerDown);
+      app.canvas.removeEventListener("pointerleave", handlePointerLeave);
+      window.removeEventListener("pointerup", handlePointerUp);
       document.removeEventListener("visibilitychange", handleVisibility);
       cleanupDpr();
+      setHoveredPointerKey(null);
+      if (hoverFrameRef.current !== null) {
+        window.cancelAnimationFrame(hoverFrameRef.current);
+        hoverFrameRef.current = null;
+      }
       clearHighlights();
     };
   }, [
     app,
+    animateKeyDown,
+    animateKeyUp,
     clearHighlights,
     maxDpr,
     onKeyHover,
     onKeyPress,
     onKeyRelease,
-    pressKey,
-    releaseKey,
+    resolvePointerKey,
+    setHoveredPointerKey,
   ]);
 
   return (
@@ -255,6 +349,28 @@ export const KeyboardScene = forwardRef<
         className="spline-keyboard-canvas"
         scene={`${ASSET_BASE_PATH}/assets/skills-keyboard.splinecode`}
         onLoad={(loadedApp: Application) => {
+          const allObjects =
+            loadedApp.getAllObjects() as SplineObjectWithParent[];
+          objectByIdRef.current = new Map(
+            allObjects.map((object) => [object.uuid, object]),
+          );
+          const hoverEventIds = Object.keys(
+            loadedApp.getSplineEvents().mouseHover ?? {},
+          );
+          pointerKeyObjectsRef.current = new Map(
+            hoverEventIds
+              .map((id) => [id, objectByIdRef.current.get(id)] as const)
+              .filter(
+                (
+                  entry,
+                ): entry is readonly [string, SplineObjectWithParent] =>
+                  Boolean(
+                    entry[1] &&
+                      entry[1].name !== "body" &&
+                      entry[1].name !== "platform",
+                  ),
+              ),
+          );
           setApp(loadedApp);
           const keyboard = loadedApp.findObjectByName("keyboard");
           if (keyboard) {
@@ -269,7 +385,7 @@ export const KeyboardScene = forwardRef<
             keyboard.rotation.y = state.rotation.y;
             keyboard.rotation.z = state.rotation.z;
           }
-          loadedApp.getAllObjects().forEach((object: SPEObject) => {
+          allObjects.forEach((object) => {
             if (object.name === "keycap" || object.name === "keycap-desktop") {
               object.visible = true;
             }
@@ -277,7 +393,7 @@ export const KeyboardScene = forwardRef<
               object.visible = false;
             }
             if (object.name) {
-              baselinesRef.current.set(object.name, object.position.y);
+              baselinesRef.current.set(object.uuid, object.position.y);
             }
           });
           onReady();
