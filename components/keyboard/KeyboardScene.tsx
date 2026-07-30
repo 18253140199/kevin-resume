@@ -196,7 +196,6 @@ export const KeyboardScene = forwardRef<
   const resetPointerKeys = useCallback(
     (activeObject: SplineObjectWithParent | null) => {
       pointerKeyObjectsRef.current.forEach((object) => {
-        object.state = undefined;
         if (object.uuid === activeObject?.uuid) {
           animateKeyDown(object);
         } else {
