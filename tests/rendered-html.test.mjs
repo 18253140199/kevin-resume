@@ -83,6 +83,8 @@ test("keeps interaction, accessibility, and sharing assets wired", async () => {
   assert.match(keyboard, /pointerKeyObjectsRef/);
   assert.match(keyboard, /disableSplineHoverTransitions/);
   assert.match(keyboard, /event\.actions\.Transition\.length = 0/);
+  assert.match(keyboard, /event\.dispatchEnter =/);
+  assert.match(keyboard, /event\.dispatchLeave =/);
   assert.match(keyboard, /addEventListener\("pointerdown"/);
   assert.doesNotMatch(keyboard, /addEventListener\("keyDown"/);
   assert.match(keyboard, /assets\/skills-keyboard\.splinecode/);

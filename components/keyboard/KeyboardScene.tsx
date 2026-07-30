@@ -28,9 +28,13 @@ type SplineObjectWithParent = SPEObject & {
 };
 
 type SplineHoverEvent = {
+  entered?: boolean;
   actions?: {
     Transition?: unknown[];
   };
+  dispatchEnter?: () => void;
+  dispatchLeave?: () => void;
+  dispatchUserEvent?: (reverse?: boolean) => void;
 };
 
 type KeyboardSceneProps = {
@@ -77,6 +81,13 @@ function disableSplineHoverTransitions(
       if (Array.isArray(event.actions?.Transition)) {
         event.actions.Transition.length = 0;
       }
+      event.dispatchEnter = () => {
+        event.entered = true;
+      };
+      event.dispatchLeave = () => {
+        event.entered = false;
+      };
+      event.dispatchUserEvent = () => {};
     }
   }
 }
