@@ -27,6 +27,12 @@ type SplineObjectWithParent = SPEObject & {
   parentUuid?: string;
 };
 
+type SplineHoverEvent = {
+  actions?: {
+    Transition?: unknown[];
+  };
+};
+
 type KeyboardSceneProps = {
   maxDpr: number;
   mode: PortfolioModule;
@@ -53,6 +59,26 @@ function capSplinePixelRatio(app: Application, maxDpr: number) {
   apply();
   window.addEventListener("resize", apply, { passive: true });
   return () => window.removeEventListener("resize", apply);
+}
+
+function disableSplineHoverTransitions(
+  app: Application,
+  keyObjectIds: Iterable<string>,
+) {
+  const eventsPerObject = (
+    app.eventManager?.handlers?.MouseHover as
+      | { eventsPerObjects?: Record<string, SplineHoverEvent[]> }
+      | undefined
+  )?.eventsPerObjects;
+  if (!eventsPerObject) return;
+
+  for (const objectId of keyObjectIds) {
+    for (const event of eventsPerObject[objectId] ?? []) {
+      if (Array.isArray(event.actions?.Transition)) {
+        event.actions.Transition.length = 0;
+      }
+    }
+  }
 }
 
 export const KeyboardScene = forwardRef<
@@ -369,6 +395,10 @@ export const KeyboardScene = forwardRef<
                       entry[1].name !== "platform",
                   ),
               ),
+          );
+          disableSplineHoverTransitions(
+            loadedApp,
+            pointerKeyObjectsRef.current.keys(),
           );
           setApp(loadedApp);
           const keyboard = loadedApp.findObjectByName("keyboard");
