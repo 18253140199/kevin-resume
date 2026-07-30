@@ -81,6 +81,8 @@ test("keeps interaction, accessibility, and sharing assets wired", async () => {
   assert.match(keyboard, /getSplineEvents\(\)\.mouseHover/);
   assert.match(keyboard, /objectByIdRef/);
   assert.match(keyboard, /pointerKeyObjectsRef/);
+  assert.match(keyboard, /animatedKeyPartsRef/);
+  assert.match(keyboard, /childrenByParent/);
   assert.match(keyboard, /disableSplineHoverTransitions/);
   assert.match(keyboard, /event\.actions\.Transition\.length = 0/);
   assert.match(keyboard, /event\.dispatchEnter =/);

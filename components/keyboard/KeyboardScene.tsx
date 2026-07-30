@@ -113,6 +113,7 @@ export const KeyboardScene = forwardRef<
   const pointerKeyObjectsRef = useRef(
     new Map<string, SplineObjectWithParent>(),
   );
+  const animatedKeyPartsRef = useRef(new Map<string, SPEObject[]>());
   const hoveredKeyRef = useRef<SplineObjectWithParent | null>(null);
   const pressedPointerKeyRef = useRef<SplineObjectWithParent | null>(null);
   const hoverFrameRef = useRef<number | null>(null);
@@ -138,30 +139,40 @@ export const KeyboardScene = forwardRef<
     return baselinesRef.current.get(object.uuid) ?? object.position.y;
   }, []);
 
+  const getAnimatedKeyParts = useCallback(
+    (object: SPEObject) =>
+      animatedKeyPartsRef.current.get(object.uuid) ?? [object],
+    [],
+  );
+
   const animateKeyDown = useCallback(
     (object: SPEObject) => {
-      const baseline = getBaseline(object);
-      gsap.killTweensOf(object.position);
-      gsap.to(object.position, {
-        y: baseline - 22,
-        duration: 0.08,
-        ease: "power2.out",
+      getAnimatedKeyParts(object).forEach((part) => {
+        const baseline = getBaseline(part);
+        gsap.killTweensOf(part.position);
+        gsap.to(part.position, {
+          y: baseline - 22,
+          duration: 0.08,
+          ease: "power2.out",
+        });
       });
     },
-    [getBaseline],
+    [getAnimatedKeyParts, getBaseline],
   );
 
   const animateKeyUp = useCallback(
     (object: SPEObject) => {
-      const baseline = getBaseline(object);
-      gsap.killTweensOf(object.position);
-      gsap.to(object.position, {
-        y: baseline,
-        duration: 0.24,
-        ease: "power2.out",
+      getAnimatedKeyParts(object).forEach((part) => {
+        const baseline = getBaseline(part);
+        gsap.killTweensOf(part.position);
+        gsap.to(part.position, {
+          y: baseline,
+          duration: 0.24,
+          ease: "power2.out",
+        });
       });
     },
-    [getBaseline],
+    [getAnimatedKeyParts, getBaseline],
   );
 
   const pressKey = useCallback(
@@ -195,24 +206,26 @@ export const KeyboardScene = forwardRef<
       objectNames.forEach((objectName, index) => {
         const object = getObject(objectName);
         if (!object) return;
-        const baseline = getBaseline(object);
-        highlightTweensRef.current.push(
-          gsap.fromTo(
-            object.position,
-            { y: baseline },
-            {
-              y: baseline + 18,
-              duration: 0.55,
-              delay: index * 0.06,
-              repeat: 3,
-              yoyo: true,
-              ease: "sine.inOut",
-            },
-          ),
-        );
+        getAnimatedKeyParts(object).forEach((part) => {
+          const baseline = getBaseline(part);
+          highlightTweensRef.current.push(
+            gsap.fromTo(
+              part.position,
+              { y: baseline },
+              {
+                y: baseline + 18,
+                duration: 0.55,
+                delay: index * 0.06,
+                repeat: 3,
+                yoyo: true,
+                ease: "sine.inOut",
+              },
+            ),
+          );
+        });
       });
     },
-    [clearHighlights, getBaseline, getObject],
+    [clearHighlights, getAnimatedKeyParts, getBaseline, getObject],
   );
 
   const resolvePointerKey = useCallback((event: SplineEvent) => {
@@ -406,6 +419,19 @@ export const KeyboardScene = forwardRef<
                       entry[1].name !== "platform",
                   ),
               ),
+          );
+          const childrenByParent = new Map<string, SPEObject[]>();
+          allObjects.forEach((object) => {
+            if (!object.parentUuid) return;
+            const siblings = childrenByParent.get(object.parentUuid) ?? [];
+            siblings.push(object);
+            childrenByParent.set(object.parentUuid, siblings);
+          });
+          animatedKeyPartsRef.current = new Map(
+            [...pointerKeyObjectsRef.current.values()].map((object) => [
+              object.uuid,
+              childrenByParent.get(object.uuid) ?? [object],
+            ]),
           );
           disableSplineHoverTransitions(
             loadedApp,
