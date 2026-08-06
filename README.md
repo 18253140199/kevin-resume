@@ -2,6 +2,15 @@
 
 杨泽存的单屏 3D 交互简历。它不是一份需要从上到下阅读的长页面，而是一套可以运行的 Resume OS：点击 3D 键帽、按下 F1-F8，或直接输入命令，查看经历、项目、能力证据、Agent Eval 与 AI Native Loop。
 
+在线预览：<https://18253140199.github.io/kevin-resume/>
+
+## 项目亮点
+
+- **Shell 式简历交互**：`whoami`、`projects`、`eval`、`loop` 等命令把个人经历、项目证据和联系方式组织成可探索界面。
+- **3D + DOM 双路径**：桌面端使用 Spline 3D 键盘，移动端、Reduced Motion 和 Data Saver 环境自动切换为 HTML 宏键盘，核心内容始终保留在 DOM 中。
+- **可访问与可部署**：支持键盘操作、静态导出、打印简历和 GitHub Pages 自动发布。
+- **可验证工程**：构建、静态导出、渲染 HTML 检查和 ESLint 都有明确脚本，便于复现。
+
 ## 技术栈
 
 - Next.js + React + TypeScript
